@@ -2,7 +2,7 @@
 
 ## Overview
 
-Wire up the account-creation flow. Step 01 left the `users` table in place and Step 01 also shipped a static `register.html` form that only renders on GET. This step adds the `POST /register` handler that validates the submitted form, hashes the password with `werkzeug`, inserts a new row into `users`, and redirects the user to `/login` on success. On any validation or uniqueness failure the form re-renders with a friendly error message. This is the first feature that actually mutates the database from a user action, so it sets the pattern (input handling, DB helper, error rendering) that login, profile, and the expense routes will all follow.
+Wire up the account-creation flow. Step 01 left the `users` table in place and Step 01 also shipped a static `register.html` form that only renders on GET. This step adds the `POST /register` handler that validates the submitted form, hashes the password with `werkzeug`, inserts a new row into `users`, and shows a success message and redirects the user to `/login` on success. On any validation or uniqueness failure the form re-renders with a friendly error message. This is the first feature that actually mutates the database from a user action, so it sets the pattern (input handling, DB helper, error rendering) that login, profile, and the expense routes will all follow.
 
 ## Depends on
 
