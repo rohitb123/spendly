@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "spendly.db")
@@ -100,4 +100,23 @@ def get_user_by_email(email):
         (email,),
     ).fetchone()
     conn.close()
+    return row
+
+
+def get_user_by_id(user_id):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT id, name, email, password_hash, created_at FROM users WHERE id = ?",
+        (user_id,),
+    ).fetchone()
+    conn.close()
+    return row
+
+
+def verify_user(email, password):
+    row = get_user_by_email(email)
+    if row is None:
+        return None
+    if not check_password_hash(row["password_hash"], password):
+        return None
     return row
