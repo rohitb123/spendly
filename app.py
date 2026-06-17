@@ -142,16 +142,13 @@ def profile():
     user = get_user_profile(user_id)
 
     # --- SECTION A: SUMMARY STATS ---
-    # owner: subagent 2
-    stats = None  # TODO: replace with get_summary_stats(user_id)
+    stats = get_summary_stats(user_id)
 
     # --- SECTION B: TRANSACTION HISTORY ---
-    # owner: subagent 1
-    transactions = []  # TODO: replace with get_recent_transactions(user_id)
+    transactions = get_recent_transactions(user_id)
 
     # --- SECTION C: CATEGORY BREAKDOWN ---
-    # owner: subagent 3
-    categories = []  # TODO: replace with get_category_breakdown(user_id)
+    categories = get_category_breakdown(user_id)
 
     return render_template(
         "profile.html",
