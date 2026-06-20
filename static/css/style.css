@@ -764,6 +764,65 @@ a { color: inherit; text-decoration: none; }
     color: var(--ink);
 }
 
+/* Date filter */
+
+.tx-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.tx-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tx-filter-input {
+    width: auto;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+.tx-filter-sep { color: var(--ink-muted); }
+
+.tx-filter-btn {
+    width: auto;
+    margin-top: 0;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+}
+
+.tx-filter-clear {
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.tx-filter-clear:hover { color: var(--accent); }
+
+.tx-range-caption {
+    margin-bottom: 1rem;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+}
+
+.tx-warning {
+    margin-bottom: 1rem;
+    color: var(--danger);
+    font-size: 0.85rem;
+}
+
+.tx-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+}
+
 /* Transaction table */
 
 .tx-table-wrap { overflow-x: auto; }

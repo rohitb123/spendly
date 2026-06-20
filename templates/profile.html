@@ -32,9 +32,23 @@
         </div>
 
         <section class="profile-card">
-            <header class="profile-card-header">
+            <header class="profile-card-header tx-header">
                 <h2 class="profile-card-title">Recent transactions</h2>
+                <form class="tx-filter" method="get" action="{{ url_for('profile') }}">
+                    <input type="date" name="start" value="{{ start }}" class="form-input tx-filter-input" aria-label="Start date">
+                    <span class="tx-filter-sep">–</span>
+                    <input type="date" name="end" value="{{ end }}" class="form-input tx-filter-input" aria-label="End date">
+                    <button type="submit" class="btn-submit tx-filter-btn">Apply</button>
+                    {% if range_active %}
+                        <a href="{{ url_for('profile') }}" class="tx-filter-clear">Clear</a>
+                    {% endif %}
+                </form>
             </header>
+            {% if invalid_range %}
+                <p class="tx-warning">Start date is after end date — no transactions to show.</p>
+            {% elif range_active %}
+                <p class="tx-range-caption">Showing {{ start or "earliest" }} – {{ end or "latest" }}</p>
+            {% endif %}
             <div class="tx-table-wrap">
                 <table class="tx-table">
                     <thead>
@@ -53,6 +67,12 @@
                                 <td><span class="cat-badge cat-{{ t.category|lower }}">{{ t.category }}</span></td>
                                 <td class="tx-amt">{{ t.amount }}</td>
                             </tr>
+                        {% else %}
+                            {% if range_active %}
+                                <tr><td colspan="4" class="tx-empty">No transactions in this range.</td></tr>
+                            {% else %}
+                                <tr><td colspan="4" class="tx-empty">No transactions yet.</td></tr>
+                            {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -72,6 +92,12 @@
                         </div>
                         <span class="cat-row-amt">{{ c.amount }}</span>
                     </div>
+                {% else %}
+                    {% if range_active %}
+                        <p class="tx-empty">No spending in this range.</p>
+                    {% else %}
+                        <p class="tx-empty">No spending yet.</p>
+                    {% endif %}
                 {% endfor %}
             </div>
             <p class="profile-coming-soon">Editing, password changes, and live data are coming in later steps.</p>
