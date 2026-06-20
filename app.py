@@ -1,10 +1,11 @@
 import os
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from database.db import (
+    create_expense,
     create_user,
     get_db,
     get_user_by_id,
@@ -21,6 +22,17 @@ from database.queries import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SPENDLY_SECRET_KEY", "dev-secret-change-me")
+
+# Fixed expense categories — single source of truth for validation and the
+# add-expense dropdown. Must match the cat-* CSS class slugs (lowercased).
+CATEGORIES = [
+    "Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other",
+]
+
+# Input bounds for an expense — reject obviously bogus / abusive values at the
+# route boundary before they reach the database.
+MAX_AMOUNT = 10_000_000
+MAX_DESCRIPTION_LEN = 500
 
 with app.app_context():
     init_db()
@@ -204,9 +216,65 @@ def analytics():
     return render_template("analytics.html")
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return "Add expense — coming in Step 7"
+    if session.get("user_id") is None:
+        flash("Please sign in to view that page.", "error")
+        return redirect(url_for("login"))
+
+    today = date.today().isoformat()
+
+    if request.method == "GET":
+        return render_template(
+            "add_expense.html",
+            categories=CATEGORIES,
+            amount="",
+            category="",
+            date=today,
+            description="",
+        )
+
+    amount_raw = request.form.get("amount", "").strip()
+    category = request.form.get("category", "").strip()
+    date_raw = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip()
+
+    parsed_date = _parse_date_param(date_raw)
+    try:
+        amount = float(amount_raw)
+    except ValueError:
+        amount = None
+
+    if amount is None or amount <= 0:
+        error = "Please enter an amount greater than zero."
+    elif amount > MAX_AMOUNT:
+        error = "Amount is too large."
+    elif category not in CATEGORIES:
+        error = "Please choose a valid category."
+    elif parsed_date is None:
+        error = "Please enter a valid date (YYYY-MM-DD)."
+    elif len(description) > MAX_DESCRIPTION_LEN:
+        error = f"Description must be {MAX_DESCRIPTION_LEN} characters or fewer."
+    else:
+        error = None
+
+    if error is not None:
+        return render_template(
+            "add_expense.html",
+            categories=CATEGORIES,
+            error=error,
+            amount=amount_raw,
+            category=category,
+            date=date_raw or today,
+            description=description,
+        )
+
+    # Return value (new row id) is unused now but Steps 08/09 will need it.
+    _expense_id = create_expense(
+        session["user_id"], amount, category, parsed_date, description or None
+    )
+    flash("Expense added.", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/edit")
@@ -220,4 +288,4 @@ def delete_expense(id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1", port=5001)
