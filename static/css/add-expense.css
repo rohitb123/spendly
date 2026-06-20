@@ -1,0 +1,55 @@
+/* Add-expense page — layout wrapper. Form fields, buttons, and errors
+   reuse the shared .form-* / .btn-submit / .auth-error styles in style.css. */
+
+.addexp-section {
+    min-height: calc(100vh - 60px - 100px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    background: var(--paper-warm);
+}
+
+.addexp-container {
+    width: 100%;
+    max-width: var(--auth-width);
+}
+
+.addexp-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.addexp-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+}
+
+.addexp-subtitle {
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+}
+
+.addexp-card {
+    background: var(--paper-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group label .optional {
+    color: var(--ink-faint);
+    font-weight: 400;
+}
+
+select.form-input {
+    cursor: pointer;
+}
+
+textarea.form-input {
+    resize: vertical;
+    min-height: 80px;
+}
