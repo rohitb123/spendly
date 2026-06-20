@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from datetime import datetime
 
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
@@ -24,6 +25,26 @@ app.secret_key = os.environ.get("SPENDLY_SECRET_KEY", "dev-secret-change-me")
 with app.app_context():
     init_db()
     seed_db()
+
+
+# ------------------------------------------------------------------ #
+# Utilities                                                           #
+# ------------------------------------------------------------------ #
+
+def _parse_date_param(raw):
+    """Return a canonical ``YYYY-MM-DD`` string, or None for missing/malformed.
+
+    The route is the boundary for untrusted query-string input, so validation
+    lives here rather than in the query helpers. The strptime/strftime round
+    trip canonicalises non-padded values (e.g. ``2026-6-5`` -> ``2026-06-05``)
+    so string comparison against the zero-padded ``date`` column is correct.
+    """
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").strftime("%Y-%m-%d")
+    except ValueError:
+        return None
 
 
 # ------------------------------------------------------------------ #
@@ -141,14 +162,25 @@ def profile():
     user_id = session["user_id"]
     user = get_user_profile(user_id)
 
-    # --- SECTION A: SUMMARY STATS ---
-    stats = get_summary_stats(user_id)
+    start = _parse_date_param(request.args.get("start"))
+    end = _parse_date_param(request.args.get("end"))
+    range_active = start is not None or end is not None
+    invalid_range = start is not None and end is not None and start > end
 
-    # --- SECTION B: TRANSACTION HISTORY ---
-    transactions = get_recent_transactions(user_id)
+    if invalid_range:
+        # start > end can never match a row; skip the DB round-trips.
+        stats = {"total_spent": "₹0.00", "transaction_count": 0, "top_category": "—"}
+        transactions = []
+        categories = []
+    else:
+        # --- SECTION A: SUMMARY STATS ---
+        stats = get_summary_stats(user_id, start=start, end=end)
 
-    # --- SECTION C: CATEGORY BREAKDOWN ---
-    categories = get_category_breakdown(user_id)
+        # --- SECTION B: TRANSACTION HISTORY ---
+        transactions = get_recent_transactions(user_id, start=start, end=end)
+
+        # --- SECTION C: CATEGORY BREAKDOWN ---
+        categories = get_category_breakdown(user_id, start=start, end=end)
 
     return render_template(
         "profile.html",
@@ -156,6 +188,10 @@ def profile():
         stats=stats,
         transactions=transactions,
         categories=categories,
+        start=start or "",
+        end=end or "",
+        range_active=range_active,
+        invalid_range=invalid_range,
     )
 
 
