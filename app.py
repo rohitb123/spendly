@@ -1,16 +1,28 @@
+import math
 import os
 import sqlite3
 from datetime import date, datetime
 
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Flask,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from database.db import (
     create_expense,
     create_user,
     get_db,
+    get_expense_by_id,
     get_user_by_id,
     init_db,
     seed_db,
+    update_expense,
     verify_user,
 )
 from database.queries import (
@@ -26,7 +38,13 @@ app.secret_key = os.environ.get("SPENDLY_SECRET_KEY", "dev-secret-change-me")
 # Fixed expense categories — single source of truth for validation and the
 # add-expense dropdown. Must match the cat-* CSS class slugs (lowercased).
 CATEGORIES = [
-    "Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other",
+    "Food",
+    "Transport",
+    "Bills",
+    "Health",
+    "Entertainment",
+    "Shopping",
+    "Other",
 ]
 
 # Input bounds for an expense — reject obviously bogus / abusive values at the
@@ -42,6 +60,7 @@ with app.app_context():
 # ------------------------------------------------------------------ #
 # Utilities                                                           #
 # ------------------------------------------------------------------ #
+
 
 def _parse_date_param(raw):
     """Return a canonical ``YYYY-MM-DD`` string, or None for missing/malformed.
@@ -59,9 +78,45 @@ def _parse_date_param(raw):
         return None
 
 
+def _validate_expense_form(amount_raw, category, date_raw, description):
+    """Validate the raw expense form fields shared by add and edit.
+
+    Returns ``(amount, parsed_date, error)``: on the first failing rule the
+    amount/date are None and ``error`` is a user-facing message; when every
+    rule passes ``error`` is None. ``amount`` is rejected unless it parses to a
+    finite float (``float('nan')``/``float('inf')`` parse without raising but
+    must never reach the database).
+    """
+    parsed_date = _parse_date_param(date_raw)
+    try:
+        amount = float(amount_raw)
+        if not math.isfinite(amount):
+            amount = None
+    except ValueError:
+        amount = None
+
+    if amount is None or amount <= 0:
+        error = "Please enter an amount greater than zero."
+    elif amount > MAX_AMOUNT:
+        error = "Amount is too large."
+    elif category not in CATEGORIES:
+        error = "Please choose a valid category."
+    elif parsed_date is None:
+        error = "Please enter a valid date (YYYY-MM-DD)."
+    elif len(description) > MAX_DESCRIPTION_LEN:
+        error = f"Description must be {MAX_DESCRIPTION_LEN} characters or fewer."
+    else:
+        error = None
+
+    if error is not None:
+        return None, None, error
+    return amount, parsed_date, None
+
+
 # ------------------------------------------------------------------ #
 # Routes                                                              #
 # ------------------------------------------------------------------ #
+
 
 @app.route("/")
 def landing():
@@ -165,6 +220,7 @@ def privacy():
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
 
+
 @app.route("/profile")
 def profile():
     if session.get("user_id") is None:
@@ -239,24 +295,9 @@ def add_expense():
     date_raw = request.form.get("date", "").strip()
     description = request.form.get("description", "").strip()
 
-    parsed_date = _parse_date_param(date_raw)
-    try:
-        amount = float(amount_raw)
-    except ValueError:
-        amount = None
-
-    if amount is None or amount <= 0:
-        error = "Please enter an amount greater than zero."
-    elif amount > MAX_AMOUNT:
-        error = "Amount is too large."
-    elif category not in CATEGORIES:
-        error = "Please choose a valid category."
-    elif parsed_date is None:
-        error = "Please enter a valid date (YYYY-MM-DD)."
-    elif len(description) > MAX_DESCRIPTION_LEN:
-        error = f"Description must be {MAX_DESCRIPTION_LEN} characters or fewer."
-    else:
-        error = None
+    amount, parsed_date, error = _validate_expense_form(
+        amount_raw, category, date_raw, description
+    )
 
     if error is not None:
         return render_template(
@@ -269,17 +310,64 @@ def add_expense():
             description=description,
         )
 
-    # Return value (new row id) is unused now but Steps 08/09 will need it.
+    # Return value (new row id) is unused now but Step 09 will need it.
     _expense_id = create_expense(
-        session["user_id"], amount, category, parsed_date, description or None
+        session.get("user_id"), amount, category, parsed_date, description or None
     )
     flash("Expense added.", "success")
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return "Edit expense — coming in Step 8"
+    if session.get("user_id") is None:
+        flash("Please sign in to view that page.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "GET":
+        expense = get_expense_by_id(id, session.get("user_id"))
+        if expense is None:
+            abort(404)
+        return render_template(
+            "edit_expense.html",
+            categories=CATEGORIES,
+            expense_id=id,
+            amount=expense["amount"],
+            category=expense["category"],
+            date=expense["date"],
+            description=expense["description"] or "",
+        )
+
+    amount_raw = request.form.get("amount", "").strip()
+    category = request.form.get("category", "").strip()
+    date_raw = request.form.get("date", "").strip()
+    description = request.form.get("description", "").strip()
+
+    amount, parsed_date, error = _validate_expense_form(
+        amount_raw, category, date_raw, description
+    )
+
+    if error is not None:
+        return render_template(
+            "edit_expense.html",
+            categories=CATEGORIES,
+            expense_id=id,
+            error=error,
+            amount=amount_raw,
+            category=category,
+            date=date_raw,
+            description=description,
+        )
+
+    # The user_id-scoped UPDATE is the ownership gate: it touches zero rows for a
+    # missing or someone else's expense, so a falsy result means "not yours" -> 404.
+    updated = update_expense(
+        id, session.get("user_id"), amount, category, parsed_date, description or None
+    )
+    if not updated:
+        abort(404)
+    flash("Expense updated.", "success")
+    return redirect(url_for("profile"))
 
 
 @app.route("/expenses/<int:id>/delete")

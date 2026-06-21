@@ -122,7 +122,7 @@ def get_recent_transactions(user_id, limit=10, start=None, end=None):
     clause, date_params = _date_clause(start, end)
 
     sql = (
-        "SELECT date, description, category, amount "
+        "SELECT id, date, description, category, amount "
         "FROM expenses "
         "WHERE user_id = ?" + clause + " "
         "ORDER BY date DESC, id DESC "
@@ -134,9 +134,12 @@ def get_recent_transactions(user_id, limit=10, start=None, end=None):
 
     transactions = []
     for row in rows:
-        formatted_date = datetime.strptime(row["date"], "%Y-%m-%d").strftime("%b %d, %Y")
+        formatted_date = datetime.strptime(row["date"], "%Y-%m-%d").strftime(
+            "%b %d, %Y"
+        )
         transactions.append(
             {
+                "id": row["id"],
                 "date": formatted_date,
                 "description": row["description"],
                 "category": row["category"],
