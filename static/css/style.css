@@ -874,6 +874,28 @@ a { color: inherit; text-decoration: none; }
     white-space: nowrap;
 }
 
+.tx-actions { white-space: nowrap; }
+
+.tx-actions .delete-form {
+    display: inline;
+    margin: 0 0 0 0.5rem;
+}
+
+.btn-delete {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.6rem;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-delete:hover { background: var(--danger-light); }
+
 /* Category badges */
 
 .cat-badge {

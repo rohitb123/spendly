@@ -17,6 +17,7 @@ from flask import (
 from database.db import (
     create_expense,
     create_user,
+    delete_expense as delete_expense_row,
     get_db,
     get_expense_by_id,
     get_user_by_id,
@@ -370,9 +371,23 @@ def edit_expense(id):
     return redirect(url_for("profile"))
 
 
-@app.route("/expenses/<int:id>/delete")
+@app.route("/expenses/<int:id>/delete", methods=["POST"])
 def delete_expense(id):
-    return "Delete expense — coming in Step 9"
+    if session.get("user_id") is None:
+        flash("Please sign in to view that page.", "error")
+        return redirect(url_for("login"))
+
+    expense = get_expense_by_id(id, session.get("user_id"))
+    if expense is None:
+        abort(404)
+
+    # The user_id-scoped DELETE is the ownership gate: it removes zero rows for a
+    # missing or someone else's expense, so a falsy result means "not yours" -> 404.
+    if not delete_expense_row(id, session.get("user_id")):
+        abort(404)
+
+    flash("Expense deleted.", "success")
+    return redirect(url_for("profile"))
 
 
 if __name__ == "__main__":
