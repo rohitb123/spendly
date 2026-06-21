@@ -57,6 +57,7 @@
                             <th>Description</th>
                             <th>Category</th>
                             <th class="tx-amt">Amount</th>
+                            <th class="tx-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -66,12 +67,13 @@
                                 <td class="tx-desc">{{ t.description }}</td>
                                 <td><span class="cat-badge cat-{{ t.category|lower }}">{{ t.category }}</span></td>
                                 <td class="tx-amt">{{ t.amount }}</td>
+                                <td class="tx-actions"><a href="{{ url_for('edit_expense', id=t.id) }}">Edit</a></td>
                             </tr>
                         {% else %}
                             {% if range_active %}
-                                <tr><td colspan="4" class="tx-empty">No transactions in this range.</td></tr>
+                                <tr><td colspan="5" class="tx-empty">No transactions in this range.</td></tr>
                             {% else %}
-                                <tr><td colspan="4" class="tx-empty">No transactions yet.</td></tr>
+                                <tr><td colspan="5" class="tx-empty">No transactions yet.</td></tr>
                             {% endif %}
                         {% endfor %}
                     </tbody>
@@ -100,7 +102,7 @@
                     {% endif %}
                 {% endfor %}
             </div>
-            <p class="profile-coming-soon">Editing, password changes, and live data are coming in later steps.</p>
+            <p class="profile-coming-soon">Password changes and live data are coming in later steps.</p>
         </section>
 
     </div>
